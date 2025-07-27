@@ -33,7 +33,7 @@ package com.totaljerkface.game
 
         private var _replayID:int;
 
-        private var _levelID:int = 1;
+        private var _levelID:int;
 
         private var _userID:int = 0;
 
