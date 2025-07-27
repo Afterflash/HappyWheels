@@ -1,7 +1,7 @@
 core/libs
 core/output
 
-node_modules/
+node_modules
 # Build and Release Folders
 bin-debug/
 bin-release/
