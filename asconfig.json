@@ -1,0 +1,21 @@
+{
+	"config": "air",
+	"compilerOptions": {
+		"source-path": [
+			"src"
+		],
+		"library-path": [
+			"core/libs"
+		],
+		"output": "core/output/happy_wheels.swf",
+		"default-background-color": "#3d88c7",
+		"default-frame-rate": 30,
+		"default-size": {
+			"width": 900,
+			"height": 500
+		},
+		"swf-version": 15
+	},
+	"application": "src/happy_wheels.xml",
+	"mainClass": "index"
+}

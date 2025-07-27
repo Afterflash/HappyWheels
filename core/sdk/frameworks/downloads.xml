@@ -1,0 +1,445 @@
+<?xml version="1.0"?>
+<!--
+
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+-->
+
+<project name="downloads" default="main" basedir=".">
+	<property name="FLEX_HOME" location=".."/>
+
+	<!-- properties -->
+	<property file="${FLEX_HOME}/build.properties"/>
+	<property file="${FLEX_HOME}/local.properties"/>
+
+	<property name="download.dir" value="${FLEX_HOME}/in"/>
+
+    <property name="lib.dir" value="${FLEX_HOME}/lib"/>
+    <!-- See note in modules/download.xml about this property. -->
+    <property name="lib.opt.dir" value="${FLEX_HOME}/lib/external/optional"/>
+
+    <property name="flex-deps.dir" value="flex_deps"/>
+    <property name="adobe.afe.url" value="https://sourceforge.net/adobe/flexsdk/code/HEAD/tree/trunk/lib/afe.jar?format=raw"/>
+    <property name="adobe.afe.file" value="afe.jar"/>
+    <property name="adobe.aglj40.url" value="https://sourceforge.net/adobe/flexsdk/code/HEAD/tree/trunk/lib/aglj40.jar?format=raw"/>
+    <property name="adobe.aglj40.file" value="aglj40.jar"/>
+    <property name="adobe.rideau.url" value="http://sourceforge.net/adobe/flexsdk/code/HEAD/tree/trunk/lib/rideau.jar?format=raw"/>
+    <property name="adobe.rideau.file" value="rideau.jar"/>
+    <property name="adobe.flex-fontkit.url" value="http://sourceforge.net/adobe/flexsdk/code/HEAD/tree/trunk/lib/flex-fontkit.jar?format=raw"/>
+    <property name="adobe.flex-fontkit.file" value="flex-fontkit.jar"/>
+    <property name="pixelbender.url" value="http://www.apache.org/dyn/mirrors/mirrors.cgi" />
+    <property name="pixelbender.folder" value="flex/pixelbender/1.0/binaries" />
+    <property name="pixelbender.bin.zip" value="apache-flex-sdk-pixel-bender-1.0.0-bin.zip" />
+    <property name="osmf.url" value="https://sourceforge.net/adobe/flexsdk/code/HEAD/tree/trunk/frameworks/libs/OSMF2_0.swc?format=raw" />
+    <property name="swfobject.url" value="https://codeload.github.com/swfobject/swfobject/zip/2.2" />
+    
+    <property name="adobe.flex.license" value="
+        ${line.separator}
+        ${line.separator}Adobe Flex SDK License Agreement:
+        ${line.separator}
+        ${line.separator}All files contained in this Adobe Flex SDK download are subject to and governed by the
+        ${line.separator}Adobe Flex SDK License Agreement specified here: 
+        ${line.separator}    http://www.adobe.com/products/eulas/pdfs/adobe_flex_software_development_kit-combined-20110916_0930.pdf, 
+        ${line.separator}By downloading, modifying, distributing, using and/or accessing any files in this Adobe Flex SDK, 
+        ${line.separator}you agree to the terms and conditions of the applicable end user license agreement.
+        ${line.separator}
+        ${line.separator}In addition to the Adobe license terms, you also agree to be bound by the third-party terms specified here: 
+        ${line.separator}    http://www.adobe.com/products/eula/third_party/. 
+        ${line.separator}Adobe recommends that you review these third-party terms.
+        ${line.separator}" />
+        
+    <!-- 
+       To clean these you must call thirdparty-clean or super-clean to clean everything.  
+       clean does not remove these since they don't change often and the downloads take time.
+    -->
+    <target name="main" 
+        depends="pixelbender-download,swfobject-download,swfobject-fabridge-download,osmf-download,optional-downloads"
+        description="Copies third-party and upstream software into place for build">
+        <echo message="Use thirdparty-clean or super-clean to remove these."/> 
+    </target>
+    
+    <target name="optional-downloads" 
+        depends="font-jars, clean-adobe-flex-sdk"
+        description="Downloads, after prompt for each, the optional thirdparty JARs"/>
+
+    <target name="clean" depends="pixelbender-clean,swfobject-clean,swfobject-fabridge-clean,clean-adobe-flex-sdk"
+        description="Cleans thirdparty downloaded files.">
+        <delete failonerror="false">
+            <fileset dir="${basedir}/libs">
+                <include name="osmf.swc"/>
+            </fileset>
+        </delete>
+        <delete includeEmptyDirs="true" failonerror="false">
+            <fileset dir="${download.dir}">
+                <include name="OSMF*/**"/>
+                <include name="osmf*/**"/>
+                <include name="swfobject*/**"/>
+            </fileset>
+        </delete>
+        <delete dir="${lib.opt.dir}" failonerror="false"/>
+     </target>
+           
+	<!--
+        osmf.swc (Version 1.0)
+        The swc at the top-level has lots of trace statements in it.  Use the one in the source zip.
+    -->
+    <target name="osmf-check" description="Checks if the Open Source Media Framework has been downloaded.">
+        <available file="${basedir}/libs/osmf.swc" property="osmf.swc.present"/>
+    </target>
+   
+    <target name="osmf-download" depends="osmf-check" unless="osmf.swc.present">
+        <available file="${download.dir}/osmf.swc" type="file" property="osmf.swc.exists"/>
+        <antcall target="download-osmf-swc" />
+    	<copy file="${download.dir}/osmf.swc" todir="${basedir}/libs" />
+    </target>
+
+    <target name="download-osmf-swc" unless="osmf.swc.exists">
+        <mkdir dir="${download.dir}"/>
+        <get src="${osmf.url}"
+            dest="${download.dir}/osmf.swc" 
+            verbose="false" ignoreerrors="true"/>
+        <antcall target="get-from-cache-if-needed" >
+            <param name="filename" value="osmf.swc" />
+        </antcall>
+        <antcall target="fail-if-not-found" >
+            <param name="filename" value="osmf.swc" />
+        </antcall>
+    </target>
+    
+    <!-- pixelbender files (Version 1.0) -->
+    <!-- Because this requires a network connection it downloads only if it doesn't already exist. -->
+    <target name="pixelbender-check" description="Checks if PixelBender files have been downloaded.">
+        <available file="${basedir}/projects/spark/src/spark/effects/CrossFade.pbj" property="pixelbender.pbj.present"/>
+    </target>
+    
+    <target name="pixelbender-download" depends="pixelbender-check" unless="pixelbender.pbj.present"
+        description="Downloads PixelBender from flex distribution server">
+        
+        <mkdir dir="${download.dir}"/>
+        <antcall target="get_from_mirror" >
+            <param name="server" value="${pixelbender.url}" />
+            <param name="folder" value="${pixelbender.folder}" />
+            <param name="file" value="${pixelbender.bin.zip}" />
+            <param name="dest" value="${download.dir}/${pixelbender.bin.zip}" />
+        </antcall>
+        <antcall target="get-from-cache-if-needed" >
+            <param name="filename" value="${pixelbender.bin.zip}" />
+        </antcall>
+        <antcall target="fail-if-not-found" >
+            <param name="filename" value="${pixelbender.bin.zip}" />
+        </antcall>
+        
+        <unzip src="${download.dir}/${pixelbender.bin.zip}" dest="${FLEX_HOME}">
+            <patternset>
+                <include name="**/*.pbj"/>
+            </patternset>
+        </unzip>
+    </target>
+
+    <target name="pixelbender-clean" description="Deletes pbj files.">
+        <ant dir="${FLEX_HOME}/frameworks/projects/framework" target="pixelbender-clean" />
+        <ant dir="${FLEX_HOME}/frameworks/projects/spark" target="pixelbender-clean" />
+    </target>
+        
+    <!-- swfobject.js (Version 2.2) -->
+    <!-- Because this requires a network connection it downloads SWFObject only if it doesn't already exist. -->
+    <target name="swfobject-check" description="Checks if SWFObject has been downloaded.">
+        <available file="${basedir}/../templates/swfobject/swfobject.js" property="swfobject.js.present"/>
+    </target>
+
+    <target name="swfobject-download" depends="swfobject-check" unless="swfobject.js.present"
+        description="Copies SWFObject from code.google.com">
+        
+        <mkdir dir="${download.dir}"/>
+        <get src="${swfobject.url}"
+            dest="${download.dir}/swfobject_2_2.zip" 
+            verbose="false" ignoreerrors="true"/>
+        
+        <antcall target="get-from-cache-if-needed" >
+            <param name="filename" value="swfobject_2_2.zip" />
+        </antcall>
+        <antcall target="fail-if-not-found" >
+            <param name="filename" value="swfobject_2_2.zip" />
+        </antcall>
+        
+        <unzip src="${download.dir}/swfobject_2_2.zip" dest="${FLEX_HOME}/templates/swfobject">
+            <patternset>
+                <include name="swfobject-2.2/swfobject/expressInstall.swf"/>
+                <include name="swfobject-2.2/swfobject/swfobject.js"/>
+            </patternset>
+            <flattenmapper />
+        </unzip>
+        <antcall target="swfobject-double-check" />
+    </target>
+
+    <target name="swfobject-clean" description="Deletes templates swfobject code.">
+        <delete failonerror="false">
+            <fileset dir="${FLEX_HOME}/templates/swfobject">
+                <include name="**/**"/>
+                <exclude name="history/*"/>
+                <exclude name="index.template.html"/>
+            </fileset>
+        </delete>
+    </target>
+    
+    <target name="have-swfobject" >
+        <condition property="still-no-swfobject">
+            <not>
+                <available file="${FLEX_HOME}/templates/swfobject/swfobject.js" />
+            </not>
+        </condition>
+    </target>
+    
+    <target name="swfobject-double-check" depends="have-swfobject" if="still-no-swfobject" description="some SWFObject zips have a different folder structure so if the first unzip doesn't work, try this one">
+        <unzip src="${download.dir}/swfobject_2_2.zip" dest="${FLEX_HOME}/templates/swfobject">
+            <patternset>
+                <include name="swfobject/expressInstall.swf"/>
+                <include name="swfobject/swfobject.js"/>
+            </patternset>
+            <flattenmapper />
+        </unzip>
+    </target>
+    
+    <!-- the copy of swfobject.js that is in javascript/fabridge -->
+    <target name="swfobject-fabridge-download" depends="swfobject-download" 
+        description="Copies swfobject.js from code.google.com to fabridge">
+        <mkdir dir="${basedir}/javascript/FABridge/samples/fabridge/swfobject"/>
+        <copy file="${FLEX_HOME}/templates/swfobject/swfobject.js" 
+            todir="${basedir}/javascript/FABridge/samples/fabridge/swfobject" />
+    </target>
+
+    <target name="swfobject-fabridge-clean" description="Deletes swobject.js from fabridge">
+        <delete failonerror="false" includeemptydirs="true">
+            <fileset dir="${basedir}/javascript/FABridge/samples/fabridge/swfobject">
+                <include name="swfobject.js"/>
+            </fileset>
+        </delete>
+    </target>
+
+
+    <!--============================================================================= -->
+	<!--      Optional Jars.  Licenses are not compatible with Apache v2 license.     -->
+	<!--============================================================================= -->
+	
+	<!--
+        Embedded Font Support
+        This does not get installed if build.noprompt is set.
+    -->
+    
+    <target name="font-jars-check" unless="font.donot.ask"
+        description="Checks if font jars are in the optional lib directory.">        
+        <condition  property="font.donot.ask">
+            <and>
+                <available file="${lib.opt.dir}/flex-fontkit.jar"/>
+                <available file="${lib.opt.dir}/afe.jar"/>
+                <available file="${lib.opt.dir}/aglj40.jar"/>
+                <available file="${lib.opt.dir}/rideau.jar"/>
+            </and>
+        </condition>
+        <condition property="font.donot.ask">
+            <isset property="build.noprompt"/>
+        </condition>
+    </target>
+    
+    <target name="font-jars" depends="font-jars-check,get-font-jars" 
+        description="Downloads and copies font jars to the optional lib directory."/>
+
+    <!-- Prompt before downloading.  -->
+    <target name="ask-font" unless="font.donot.ask"
+        description="Prompt the user before downloading Fontkit libraries">
+        
+        <property name="font.prompt.text" 
+            value="Apache Flex can optionally integrate with Adobe's embedded font support.
+            ${line.separator}This feature requires a few font jars from the Adobe Flex SDK.
+            ${line.separator}The Adobe SDK license agreement for Adobe Flex 4.6 applies to these jars.
+            ${line.separator}This license is not compatible with the Apache v2 license.
+            ${adobe.flex.license}
+            ${line.separator}Do you want to install these jars from the Adobe Flex SDK?"/>
+        <input
+            message="${font.prompt.text}"
+            validargs="y,n"
+            defaultvalue="n"
+            addproperty="input.font.download"/>
+        <condition property="do.font.install">
+            <equals arg1="y" arg2="${input.font.download}"/>
+        </condition>
+        <!-- Only ask once per ant run.  -->
+        <property name="font.donot.ask" value="set"/>
+    </target>
+    
+    <target name="get-font-jars" depends="ask-font" if="do.font.install">
+        
+        <antcall target="get-adobe-flex-dependencies"/>
+
+        <copy todir="${lib.opt.dir}" verbose="true">
+            <fileset dir="${download.dir}">
+                <include name="afe.jar" />
+                <include name="aglj40.jar" />
+                <include name="flex-fontkit.jar" />
+                <include name="rideau.jar" />
+            </fileset>
+        </copy>
+    </target>
+        	
+    <target name="get-adobe-flex-dependencies"
+        description="Making sure the Adobe Flex Dependencies ar available">
+
+        <available file="${download.dir}/${adobe.afe.file}" type="file"
+                   property="adobe.afe.download.exists"/>
+        <available file="${download.dir}/${adobe.aglj40.file}" type="file"
+                   property="adobe.aglj40.download.exists"/>
+        <available file="${download.dir}/${adobe.rideau.file}" type="file"
+                   property="adobe.rideau.download.exists"/>
+        <available file="${download.dir}/${adobe.flex-fontkit.file}" type="file"
+                   property="adobe.flex-fontkit.download.exists"/>
+
+        <antcall target="download-afe" />
+        <antcall target="download-aglj40" />
+        <antcall target="download-rideau" />
+        <antcall target="download-flex-fontkit" />
+
+    </target>
+
+    <target name="download-afe" unless="adobe.afe.download.exists" >
+        <mkdir dir="${download.dir}"/>
+        <get src="${adobe.afe.url}"
+            dest="${download.dir}/${adobe.afe.file}" ignoreerrors="true"/>
+        <antcall target="get-from-cache-if-needed" >
+            <param name="filename" value="${adobe.afe.file}" />
+        </antcall>
+        <antcall target="fail-if-not-found" >
+            <param name="filename" value="${adobe.afe.file}" />
+        </antcall>
+    </target>
+
+    <target name="download-aglj40" unless="adobe.aglj40.download.exists" >
+        <mkdir dir="${download.dir}"/>
+        <get src="${adobe.aglj40.url}"
+             dest="${download.dir}/${adobe.aglj40.file}" ignoreerrors="true"/>
+         <antcall target="get-from-cache-if-needed" >
+             <param name="filename" value="${adobe.aglj40.file}" />
+         </antcall>
+         <antcall target="fail-if-not-found" >
+             <param name="filename" value="${adobe.aglj40.file}" />
+         </antcall>
+    </target>
+
+    <target name="download-rideau" unless="adobe.rideau.download.exists" >
+        <mkdir dir="${download.dir}"/>
+        <get src="${adobe.rideau.url}"
+             dest="${download.dir}/${adobe.rideau.file}" ignoreerrors="true"/>
+         <antcall target="get-from-cache-if-needed" >
+             <param name="filename" value="${adobe.rideau.file}" />
+         </antcall>
+         <antcall target="fail-if-not-found" >
+             <param name="filename" value="${adobe.rideau.file}" />
+         </antcall>
+    </target>
+
+    <target name="download-flex-fontkit" unless="adobe.flex-fontkit.download.exists" >
+        <mkdir dir="${download.dir}"/>
+        <get src="${adobe.flex-fontkit.url}"
+             dest="${download.dir}/${adobe.flex-fontkit.file}" ignoreerrors="true"/>
+         <antcall target="get-from-cache-if-needed" >
+             <param name="filename" value="${adobe.flex-fontkit.file}" />
+         </antcall>
+         <antcall target="fail-if-not-found" >
+             <param name="filename" value="${adobe.flex-fontkit.file}" />
+         </antcall>
+    </target>
+
+    <target name="clean-adobe-flex-sdk">
+        <delete dir="${download.dir}/${flex-deps.dir}"/>
+    </target>
+
+    <target name="get_from_mirror">
+        <condition property="mirrorurl" value="true">
+            <contains string="${server}" substring="mirrors.cgi" />
+        </condition>
+        <antcall target="get_mirror_data" />
+        <condition property="usingmirror">
+            <available file="${basedir}/mirror.json" />
+        </condition>
+        <antcall target="download_using_mirror">
+            <param name="server" value="${server}" />
+            <param name="folder" value="${folder}" />
+            <param name="file" value="${file}" />
+            <param name="dest" value="${dest}" />
+        </antcall>
+        <antcall target="download_using_get">
+            <param name="server" value="${server}" />
+            <param name="folder" value="${folder}" />
+            <param name="file" value="${file}" />
+            <param name="dest" value="${dest}" />
+        </antcall>
+    </target>
+    
+    <target name="get_mirror_data" if="mirrorurl">
+        <get src="${server}/${folder}/${file}?asjson=true" verbose="true" dest="${basedir}/mirror.json" ignoreerrors="true"/>
+    </target>
+    
+    <target name="download_using_mirror" if="usingmirror">
+        <replace file="${basedir}/mirror.json">
+            <replacefilter token="{"
+            value="" />
+            <replacefilter token="}"
+            value="" />
+            <replacefilter token="&quot;"
+            value="" />
+            <replacefilter token=","
+            value="&#x0d;&#x0a;" />
+            <replacefilter token=":"
+            value="=" />
+        </replace>
+        <replace file="${basedir}/mirror.json">
+            <replacefilter token="http="
+            value="http:" />
+        </replace>
+        <property file="${basedir}/mirror.json" />
+        <delete file="${basedir}/mirror.json" />
+        <echo>Using mirror: ${preferred}</echo>
+        <get src="${preferred}${folder}/${file}" dest="${dest}" ignoreerrors="true" />
+    </target>
+    
+    <target name="download_using_get" unless="usingmirror">
+        <get src="${server}/${folder}/${file}" dest="${dest}" ignoreerrors="true"/>
+    </target>
+
+    <target name="fail-if-not-found">
+        <fail message="${filename} could not be downloaded or found in cache">
+            <condition>
+                <not>
+                    <available file="${download.dir}/${filename}" />
+                </not>
+            </condition>
+        </fail>
+    </target>
+
+    <target name="double-check-file" >
+        <condition property="still-no-file" value="true">
+            <and>
+                <not>
+                    <available file="${download.dir}/${filename}" />
+                </not>
+                <isset property="env.FLEX_DOWNLOAD_CACHE" />
+            </and>
+        </condition>
+        <echo>Need file: ${still_no_file}</echo>
+    </target>
+    <target name="get-from-cache-if-needed" depends="double-check-file" if="still-no-file">
+        <copy file="${env.FLEX_DOWNLOAD_CACHE}/${filename}" tofile="${download.dir}/${filename}" />
+    </target>
+</project>

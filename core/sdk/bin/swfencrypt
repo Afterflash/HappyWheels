@@ -1,0 +1,38 @@
+#
+# swfencrypt shell script to launch swfencrypt.swf on OSX, Unix, or Cygwin.
+# In Windows Command Prompt, use swfencrypt.bat instead.
+#
+
+if [ "x${AIR_SDK_HOME}" = "x" ]
+then
+    SCRIPT_HOME=`dirname "$0"`
+    AIR_SDK_HOME=${SCRIPT_HOME}/..
+else
+    echo Using AIR SDK: $AIR_SDK_HOME
+fi
+
+case `uname` in
+        CYGWIN*)
+            OS="win"
+            EXE="adl.exe"
+        ;;
+        Darwin*)
+            OS="mac"
+            EXE="adl"
+        ;;
+        *)
+            OS="linux"
+            EXE="adl_linux64"
+            if [ ! -e $EXE ]
+            then
+                EXE="adl"
+            fi
+esac
+
+
+if [ $OS = "win" ]; then
+    AIR_SDK_HOME=`cygpath -m $AIR_SDK_HOME`
+fi
+
+$AIR_SDK_HOME/bin/$EXE -nodebug -cmd $AIR_SDK_HOME/bin/apps/swfencrypt.xml -- $@
+

@@ -1,0 +1,20 @@
+{
+    "name": "happy-wheels-source",
+    "version": "1.0.0",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "build": "call core\\scripts\\build.bat",
+        "start": "node core\\scripts\\start.js",
+        "reload": "npm run build && npm run start"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "asconfigc": "^1.8.1",
+        "express": "^5.1.0",
+        "tail": "^2.2.6"
+    }
+}
